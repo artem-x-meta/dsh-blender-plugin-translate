@@ -1,8 +1,9 @@
 # Chinese → English glossary for the DSH Blender toolchain
 
-The plugin's docs are a Russian/Chinese hybrid, and **tool receipts come back with Chinese field
-values** (e.g. `"浮块"`, `"真贴上"`). This table is the fixed translation I use when reporting, so
-nothing in an answer is ever left in Chinese.
+Upstream's docs, tool descriptions and receipts are Chinese, and **tool receipts come back with
+Chinese field values** (e.g. `"浮块"`, `"真贴上"`). This table maps those terms to English, for the
+cases where a Chinese value still surfaces somewhere (the Chinese column is the upstream source term
+and is kept on purpose).
 
 Source of truth: `skills/blender-modeling/*` and `lib/runtime/*` of `dsh-blender-plugin` v3.0.6.
 
@@ -127,9 +128,9 @@ Source of truth: `skills/blender-modeling/*` and `lib/runtime/*` of `dsh-blender
 | 预算 | budget | |
 | 阈值 | threshold | |
 
-## 6. How I report from now on
+## 6. Conventions when reporting
 
-- Chat answers: Russian.
+- Chat answers: in whatever language the user writes.
 - Tool, op and field names: kept as-is (they are already Latin: `blender_rt_do`, `audit_mesh`, `verdict`).
 - Chinese values inside receipts: translated with the table above, original value quoted only when the exact
   string matters (and then with the English gloss next to it).

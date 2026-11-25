@@ -18,8 +18,8 @@ them; if a notice looks missing, treat that as a bug and open an issue.
 
 ## What was changed
 
-- **Only strings and comments were translated** (Chinese/Russian hybrid → English), plus the
-  documentation under `docs/`.
+- **Only strings and comments were translated** (Chinese → English), plus the documentation under
+  `docs/`.
 - **Code was not modified.** Every translated file was compared against the original by AST
   (Python) or a comment/string-stripped token stream (JavaScript/TypeScript): identifiers, control
   flow, numbers, JSON keys, format placeholders and API names are identical.

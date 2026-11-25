@@ -3,10 +3,9 @@
 Instructions for a coding agent that opens this repository. Read this file first, then act.
 
 This repo is an **English localization of `dsh-blender-plugin`** (the Blender bridge for DeepSeek
-Harness). Upstream ships its strings, comments and documentation in a Russian/Chinese hybrid; this
-repo contains the same code with **only strings and comments translated**, plus the translated skill
-documentation. Logic is unchanged — that was verified by AST / token comparison against the original
-for every file.
+Harness). Upstream ships its strings, comments and documentation in Chinese; this repo contains the
+same code with **only strings and comments translated**, plus the translated skill documentation.
+Logic is unchanged — that was verified by AST / token comparison against the original for every file.
 
 ---
 

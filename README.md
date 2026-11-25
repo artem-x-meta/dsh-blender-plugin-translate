@@ -2,8 +2,8 @@
 
 An unofficial **English translation** of [`dsh-blender-plugin`](https://github.com/sixtysevenlf/dsh-blender-plugin),
 the Blender bridge for DeepSeek Harness. Upstream ships its tool descriptions, receipts, comments and
-documentation as a Russian/Chinese hybrid; this repo contains the same code with **only strings,
-comments and docs translated**, so every receipt the agent reads comes back in English.
+documentation in Chinese; this repo contains the same code with **only strings, comments and docs
+translated**, so every receipt the agent reads comes back in English.
 
 - **241 019** Chinese characters removed across **487** files → **13** left, all of them regex
   alternatives that match Blender's *own* localized error output (see `NOTICE.md`).
