@@ -50,10 +50,14 @@ cp -a plugin/. "$PKG"/
 find "$PKG" -name __pycache__ -type d -exec rm -rf {} +
 ```
 
-Then **restart what caches the strings**: the plugin backend (`blender_viewport(op="restart")` if you
-have the tools, otherwise restart DSH), Blender itself (the add-on is Python loaded at startup —
-reconnect it: `N` panel → *DSH Blender Bridge* → **Connect**), and any headless worker. Nothing
-hot-reloads these; skipping the restart is the usual reason "it is still Chinese".
+Then **restart what caches the strings** — all three, or you will still see Chinese somewhere:
+
+1. **Plugin backend** — `blender_viewport(op="restart")` if you have the tools, otherwise restart DSH.
+2. **The DSH host process** — some tool text (for example `blender_viewport`'s `next_action` and
+   `hint`) is JavaScript evaluated inside DSH itself, loaded when DSH started. Restarting only the
+   plugin backend does not reload it.
+3. **Blender** — the add-on is Python loaded at startup; quit and reopen Blender, then reconnect it
+   (`N` panel → *DSH Blender Bridge* → **Connect**).
 
 ## Verify
 

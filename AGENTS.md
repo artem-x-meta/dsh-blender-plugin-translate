@@ -47,10 +47,13 @@ Nothing hot-reloads these:
 
 1. **Plugin backend** (loads `lib/*.js` at start). With the DSH Blender tools available:
    `blender_viewport(op="restart")`, then `blender_viewport(op="status")` must be healthy.
-   Without the tools: restart the DSH session / backend process.
-2. **Blender** — the add-on is Python loaded at Blender start. Quit Blender, start it, reconnect:
+2. **The DSH host itself** — some tool text is evaluated in the DSH process (for example the
+   `next_action` / `hint` strings that `blender_viewport` returns), and that process loaded the
+   plugin at startup. Restart DSH (or reload the plugin in the host) or those strings stay in the old
+   language even though the files on disk are already English.
+3. **Blender** — the add-on is Python loaded at Blender start. Quit Blender, start it, reconnect:
    3D viewport → `N` → *DSH Blender Bridge* → **Connect** (port 9876).
-3. **Headless workers**, if used: `blender_rt_worker(op="restart", name="<name>")`.
+4. **Headless workers**, if used: `blender_rt_worker(op="restart", name="<name>")`.
 
 ### 1.4 Verify — do not skip
 
