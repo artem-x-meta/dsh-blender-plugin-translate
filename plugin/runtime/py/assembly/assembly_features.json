@@ -1,0 +1,273 @@
+{
+  "schema": "dsh-assembly-features/1",
+  "title": "DSH assembly feature library (9 mating features + four tolerance tiers + lead-in chamfer + ISO 273 clearance holes)",
+  "units": "mm",
+  "length_unit_note": "Every length in this file is in **millimeters**; converting Blender-side geometry units -> millimeters goes through the scene's unit_settings.scale_length (contract.py's _units()); this file performs no unit conversion.",
+  "source": "SpatiaOS/Procedura (MIT) lib/assembly.scad — module structure, formulas and values carried over verbatim; do not reinvent them; the ISO 273 clearance holes are the empirical offset table that ships with that source (see iso273_clearance_diameter.series_note).",
+  "why_this_file": "The number one reason mating parts do not fit is not the wrong tolerance tier, but the male and female sides each carrying their own literal (change one, forget the other). Making it a data file lets mate_check / fit_help / the generator read **one and the same** set of numbers instead of copying them three times.",
+
+  "shared_nominal_rule": {
+    "rule": "The male part is built at nominal, the female part at nominal + 2×asm_fit(cls) — both sides must come from the same nominal variable; never hard-code an independent number for the female hole.",
+    "why": "Two independent literals inevitably drift when something changes: either the female hole does not scale with it (crushed / welded shut), or it is opened too far (wobble). This is the first discipline spelled out in assembly.scad.",
+    "check_by": "mate_check(conn_id, fit=…): measures the measured per-side median clearance; anything outside nominal ± tol means this discipline has been broken; check_interface only has a bbox measure and cannot see a 0.15 mm level deviation.",
+    "sign_convention": "asm_fit is a **per-side** reading: positive = material relieved (gap), negative = interference (press fit). Female bore = nominal + 2×fit (relieved once on each side)."
+  },
+
+  "fits": {
+    "_comment": "asm_fit(cls) four tiers carried over verbatim; per_side_mm is the **per-side** clearance. Unknown cls -> the source falls back to 0.15 (location).",
+    "clearance": {
+      "per_side_mm": 0.25,
+      "sign": "positive",
+      "purpose": "Free sliding / rotating fit (guide rails, shafts that must turn, removable pins)",
+      "when": "Parts must move relative to each other, or must go in and out by hand",
+      "blender": "hole = nominal + 0.5; pin / shaft = nominal"
+    },
+    "location": {
+      "per_side_mm": 0.15,
+      "sign": "positive",
+      "purpose": "Hand-press locating fit (dowel pins / tenons, seams, alignment that must come apart and back together repeatedly)",
+      "when": "Needs accurate location yet must still insert; the default tier for 3D-printed parts",
+      "blender": "hole = nominal + 0.3; pin / shaft = nominal"
+    },
+    "press": {
+      "per_side_mm": -0.05,
+      "sign": "negative",
+      "purpose": "Interference press fit (wood dowels, heat-set brass inserts, glue-free press-in bushings)",
+      "when": "Permanent fixing that transmits force through friction; needs hammering or heat",
+      "blender": "hole = nominal - 0.1 (smaller than the male part); the female part is still modeled smaller than the male part in Blender and the real part deforms its way in"
+    },
+    "snap": {
+      "per_side_mm": 0.2,
+      "sign": "positive",
+      "purpose": "Snap-fit working clearance (the cantilever must be able to deflect first, then catch)",
+      "when": "snap_tab must pass through snap_window without interference",
+      "blender": "window = tab + 0.4; 0.2 per side"
+    }
+  },
+  "fit_default_cls": "location",
+  "fit_unknown_fallback_mm": 0.15,
+  "fit_tolerance_note": "The smallest spacing between two tiers is only 0.05 mm (location 0.15 ↔ snap 0.20). The noise floor of mesh measurement (triangulation chord error + sparse sampling) is of that order, so mate_check's default tol_mm=0.15 is **not** there to distinguish tiers; it is the measurement + process band. To resolve tiers you must pass a smaller tol_mm explicitly.",
+
+  "lead_chamfer": {
+    "formula": "asm_lead(d) = max(0.6, 0.15 * d)",
+    "min_mm": 0.6,
+    "frac_of_d": 0.15,
+    "d_means": "Diameter at the chamfered location: the female opening uses bore = nominal + 2*fit, the male tip uses d",
+    "why": "Every male tip / female opening needs a lead-in chamfer so the parts find their own alignment and seat themselves — the cheapest item in \"make generated parts actually assemble\". Original: Keep it; do not model bare cylinders.",
+    "blender": "Female opening: cone (radius1=bore/2, radius2=(bore+2*lead)/2) merged with the bore into the cutter and cut in one Boolean DIFFERENCE; male tip: cone (radius1=d/2, radius2=max(0.2,d-2*lead)/2) joined onto the pin"
+  },
+
+  "iso273_clearance_diameter": {
+    "formula": "asm_bolt_clear_d(m) = m<=2 ? m+0.4 : m<=3 ? m+0.6 : m<=6 ? m+0.8 : m<=12 ? m+1.0 : m+1.5",
+    "branches": [
+      { "m_le": 2, "offset_mm": 0.4 },
+      { "m_le": 3, "offset_mm": 0.6 },
+      { "m_le": 6, "offset_mm": 0.8 },
+      { "m_le": 12, "offset_mm": 1.0 },
+      { "m_le": null, "offset_mm": 1.5 }
+    ],
+    "m_means": "Metric thread nominal diameter M<m> (mm)",
+    "series_note": "Nominally these are ISO 273 clearance holes, but this set of offsets in the source is **not** one consistent series: M3=3.6 / M4=4.8 / M5=5.8 / M6=6.8 / M8=9.0 match ISO 273 coarse, while at M12 m+1.0=13.0 lands in the fine tier. The source is authoritative — do not \"correct\" it against the ISO table, or it will no longer agree with the upstream generated parts.",
+    "examples": {
+      "M2": 2.4,
+      "M3": 3.6,
+      "M4": 4.8,
+      "M5": 5.8,
+      "M6": 6.8,
+      "M8": 9.0,
+      "M10": 11.0,
+      "M12": 13.0
+    }
+  },
+
+  "features": [
+    {
+      "name": "peg",
+      "kind": "male",
+      "cn": "Pin / shaft (male)",
+      "purpose": "Locating pin, pivot shaft, tenon: a solid cylinder growing from the origin along +Z, with a self-aligning chamfer on the tip.",
+      "key_dims": { "d": "Diameter (= the shared nominal)", "len": "Overall length (including the chamfer section)" },
+      "formula": "lead = asm_lead(d); body = cylinder(h = max(0.01, len - lead), d = d); tip = cylinder(h = lead, d1 = d, d2 = max(0.2, d - 2*lead)), at z = len - lead",
+      "pairs_with": "socket (same d), bolt_hole (when used as a shaft passing through)",
+      "ops": "union onto its own part",
+      "blender": "primitive_cylinder_add(vertices=48, radius=d/2, depth=len-lead) + primitive_cone_add(radius1=d/2, radius2=(d-2*lead)/2, depth=lead) placed at z=len-lead, then join into one object",
+      "cautions": [
+        "Do not model a bare cylinder: a pin without a lead cannot be inserted into a hole (this is the first thing the original calls out).",
+        "d must come from the **same numeric source** as the socket's nominal.",
+        "Tip d2 lower bound is 0.2 mm — do not give a thin pin too large a chamfer, or the tip turns into a needle."
+      ]
+    },
+    {
+      "name": "socket",
+      "kind": "female",
+      "cn": "Socket / seat bore (female)",
+      "purpose": "A blind counterbore paired with peg: the bore is relieved according to the fit tier, and the opening is flared as a lead-in.",
+      "key_dims": {
+        "d": "Male part nominal",
+        "depth": "Hole depth (drilled downward from the female part's top face at z = depth)",
+        "cls": "Fit tier, default location"
+      },
+      "formula": "bore = d + 2*asm_fit(cls); lead = asm_lead(bore); body = cylinder(h = depth + 0.02, d = bore) at z = -0.01; opening = cylinder(h = lead + 0.01, d1 = bore, d2 = bore + 2*lead) at z = depth - lead",
+      "pairs_with": "peg (same d)",
+      "ops": "subtract as a negative volume: difference() { body; socket(...); }",
+      "blender": "Join the two cutters (cylinder + cone) into a single cutter object first, then add one BOOLEAN/DIFFERENCE modifier to the female part — one boolean is much faster than two and leaves one less intermediate state.",
+      "cautions": [
+        "The mouth funnel must face the assembly direction (+Z, outward); do not put it at the bottom of the hole.",
+        "Depth +0.02 mm overcut: keeps the hole bottom from being coplanar with the female part's bottom face, which would leave stray faces behind in the boolean.",
+        "bore already contains fit, so do not add allowance to the male part again (per-side relief twice becomes a double clearance)."
+      ]
+    },
+    {
+      "name": "bolt_hole",
+      "kind": "female",
+      "cn": "Screw clearance hole (female)",
+      "purpose": "Clearance hole for a single metric screw: the hole diameter follows the ISO 273 offset, the entrance has a funnel, and a counterbore is optional.",
+      "key_dims": {
+        "m": "Thread nominal M<m>",
+        "depth": "Hole depth",
+        "cbore": "Whether a counterbore is wanted (cap-head screws)",
+        "cbore_d / cbore_depth": "Counterbore diameter / depth (0 = take cd+m / m automatically)"
+      },
+      "formula": "cd = asm_bolt_clear_d(m); lead = 0.6; cbd = cbore_d > 0 ? cbore_d : cd + m; cbh = cbore_depth > 0 ? cbore_depth : m; hole = cylinder(h = depth + 0.02, d = cd) at z = -depth; funnel = cylinder(h = lead + 0.01, d1 = cd, d2 = cd + 2*lead) at z = -lead; counterbore = cylinder(h = cbh + 0.02, d = cbd) at z = -cbh",
+      "pairs_with": "bolt_circle (pattern), boss (threaded boss on the opposite side)",
+      "ops": "subtract as a negative volume",
+      "blender": "cylinder(radius=cd/2, depth=depth) + cone entrance funnel (+ optional cylinder counterbore) joined into a cutter -> BOOLEAN/DIFFERENCE",
+      "cautions": [
+        "The funnel is on the entrance side only (the face near z ≈ 0); do not chamfer the bottom of the hole.",
+        "The counterbore defaults cbd = cd + m, cbh = m are rules of thumb: a cap-head M3 has a 5.5 mm head diameter, and cd+m = 6.6 is enough room.",
+        "Do not copy the thread minor diameter for the clearance hole (2.5 for M3 will not fit) — use asm_bolt_clear_d."
+      ]
+    },
+    {
+      "name": "bolt_circle",
+      "kind": "female",
+      "cn": "Bolt-circle pattern (female)",
+      "purpose": "count clearance holes evenly spaced on a pitch circle (flanges / end caps).",
+      "key_dims": {
+        "bcd": "**Bolt circle diameter** (not radius)",
+        "count": "Number of holes",
+        "m": "Thread nominal",
+        "depth": "Hole depth",
+        "phase": "Starting phase angle (degrees)"
+      },
+      "formula": "for i in [0 : max(1,count)-1]: rotate_z(phase + i*360/max(1,count)) then translate_x(bcd/2) then bolt_hole(m, depth, cbore)",
+      "pairs_with": "bolt_hole (single hole), boss",
+      "ops": "subtract as a negative volume (the whole group in one cut)",
+      "blender": "Build count cutters (cylinder+cone) in a for loop -> join them all into one cutter -> a single BOOLEAN/DIFFERENCE; you can also use an Array modifier around an Empty for the circular pattern, but Apply it before subtracting.",
+      "cautions": [
+        "bcd is a diameter: writing a radius squeezes the holes into the center (the original parameter is literally named Bolt Circle Diameter).",
+        "count lower bound 1 (source max(1, count)) — passing 0 does not crash, but that is no holes, not infinite holes.",
+        "One boolean per hole is an order of magnitude slower: join first, then subtract."
+      ]
+    },
+    {
+      "name": "boss",
+      "kind": "male_with_female",
+      "cn": "Boss / support post (male, with its own pilot hole)",
+      "purpose": "A cylindrical boss standing out of a wall, with a press-tier screw pilot hole in the center (self-tapping / heat-set brass insert).",
+      "key_dims": {
+        "od": "Outer diameter",
+        "screw_d": "Screw nominal / pilot-hole nominal",
+        "height": "Height",
+        "cls": "Fit tier, default press",
+        "fillet": "Root fillet ring width (default 1)"
+      },
+      "formula": "outer = cylinder(h = height, d = od) ∪ cylinder(h = fillet, d1 = od + 2*fillet, d2 = od) (root fillet ring); pilot hole = cylinder(h = height + 0.02, d = screw_d + 2*asm_fit(cls)) at z = -0.01; result = difference(outer, pilot hole)",
+      "pairs_with": "bolt_hole (clearance hole on the opposite side)",
+      "ops": "union the outer body onto the part; subtract the pilot hole",
+      "blender": "cylinder(od/2, height) + cone(radius1=(od+2*fillet)/2, radius2=od/2, depth=fillet) for the root ring -> join -> subtract the pilot-hole cylinder (one DIFFERENCE)",
+      "cautions": [
+        "The pilot hole defaults to the press tier (negative allowance) — that is for self-tapping screws / heat-set inserts; if you want a clearance hole use bolt_hole, and do not turn this one into a positive allowance.",
+        "The fillet ring is a cheap stand-in for a real fillet: use a Bevel modifier for a true chamfer, but on printed parts this conical ring is more robust."
+      ]
+    },
+    {
+      "name": "snap_tab",
+      "kind": "male",
+      "cn": "Snap-fit cantilever (male)",
+      "purpose": "Cantilever beam + hook: it is pushed aside by the ramp on insertion and catches on the window edge once seated.",
+      "key_dims": {
+        "width": "Cantilever width (extrusion height in Z)",
+        "length": "Cantilever length (+Y)",
+        "thick": "Root thickness (X)",
+        "hook": "Hook overhang (default 1.2)"
+      },
+      "formula": "linear_extrude(height = width) polygon: [(0,0), (thick,0), (thick, length-2*hook), (thick+hook, length-hook), (thick, length), (0, length)]",
+      "pairs_with": "snap_window (+ snap-tier clearance)",
+      "ops": "union onto its own part",
+      "blender": "Do not force this with cubes: build the 6 vertices directly with mesh.from_pydata, create the faces, then Solidify/Extrude to width — the hook ramp guides insertion, and flattening it means the part will not go in.",
+      "cautions": [
+        "The second-to-last point (thick+hook, length-hook) is the step that catches the window edge, and the last point (thick, length) is the ramp tip — swapping the two turns it into a barb.",
+        "No chamfer or notch at the root (stress concentration point).",
+        "hook default 1.2 is an FDM rule of thumb: too small and it will not hold, too large and you cannot get it apart."
+      ]
+    },
+    {
+      "name": "snap_window",
+      "kind": "female",
+      "cn": "Snap relief window (female)",
+      "purpose": "A through window for the snap hook to pass through, with relief on all four sides so the hook can actually get through on insertion.",
+      "key_dims": {
+        "width / length / thick": "Correspond to snap_tab's width / length / thickness",
+        "gap": "**Per-side** relief, default 0.3"
+      },
+      "formula": "cube([thick + 2*gap, length + 2*gap, width + 2*gap]), origin (-gap, -gap, -gap)",
+      "pairs_with": "snap_tab",
+      "ops": "subtract as a negative volume",
+      "blender": "primitive_cube_add(size=1) + scale = (thick+2gap, length+2gap, width+2gap), placed at (-gap,-gap,-gap) -> BOOLEAN/DIFFERENCE",
+      "cautions": [
+        "gap is **per side**: multiply by 2 in all three directions; miss one direction and the hook jams.",
+        "The window must be through (through the wall thickness); a blind window lets the hook bottom out.",
+        "Consider the split / parting direction: windows with very thin walls print with ragged edges."
+      ]
+    },
+    {
+      "name": "tab",
+      "kind": "male",
+      "cn": "Locating tongue (male)",
+      "purpose": "A rectangular locating tongue whose chamfered tip self-aligns into the slot, preventing rotation / fixing an angle.",
+      "key_dims": {
+        "width": "X width",
+        "thick": "Y thickness",
+        "length": "Z length",
+        "chamfer": "Tip chamfer (default 0.8)"
+      },
+      "formula": "ch = min(chamfer, min(width, thick)/2 - 0.05); hull(linear_extrude(0.01) square(width, thick), translate(ch, ch, length-0.01) linear_extrude(0.01) square(width-2ch, thick-2ch))",
+      "pairs_with": "slot (same width/thick, default location tier)",
+      "ops": "union onto its own part",
+      "blender": "cube scaled to (width, thick, length) + a Bevel modifier (limit=TOP edges) to approximate the chamfer; or hull two cubes — in Blender you can approximate it with a bottom cube + a smaller top cube + a scaled cone.",
+      "cautions": [
+        "chamfer is clamped by min(..., min(width,thick)/2-0.05): giving 0.8 on a small tongue gets reduced automatically (not a bug).",
+        "A single rectangular tongue constrains only 2 directions: to prevent rotation use a pair (at 90° to each other) or switch to peg+socket."
+      ]
+    },
+    {
+      "name": "slot",
+      "kind": "female",
+      "cn": "Locating slot (female)",
+      "purpose": "A rectangular slot paired with tab, sized tab + fit, with a lead-in at the opening.",
+      "key_dims": {
+        "width / thick": "Correspond to tab's width / thickness",
+        "depth": "Slot depth",
+        "cls": "Fit tier, default location"
+      },
+      "formula": "g = asm_fit(cls); lead = 0.6; body = translate(-g,-g,-0.01) cube(width+2g, thick+2g, depth+0.02); opening = translate(0,0,depth-lead) hull(bottom square(width+2g, thick+2g), top face translate(-lead,-lead,lead) square(width+2g+2lead, thick+2g+2lead))",
+      "pairs_with": "tab",
+      "ops": "subtract as a negative volume",
+      "blender": "cube(width+2g, thick+2g, depth) + a four-sided frustum for the opening (cone with vertices=4 or a scaled cube) — join the two into a cutter and do a single BOOLEAN/DIFFERENCE",
+      "cautions": [
+        "The slot mouth funnel faces the assembly direction; reverse it and it becomes tighter the further you push.",
+        "g is per side, so all four sides need relief (same easy-to-miss point as snap_window).",
+        "Slot depth +0.02 overcut, so it is not coplanar with the bottom face."
+      ]
+    }
+  ],
+
+  "blender_general": {
+    "male_ops": "union (join the male part onto the body; or BOOLEAN/UNION, but join is faster and loses no geometry)",
+    "female_ops": "subtract (join several cutters into **one** cutter object first, then a single BOOLEAN/DIFFERENCE)",
+    "manual_booleans": "bpy.ops booleans need context: bpy.context.view_layer.objects.active = female_part; female_part.select_set(True); modifier object=Cutter; operation='DIFFERENCE'; then modifier_apply",
+    "evaluated_mesh": "With an unapplied Boolean modifier, ob.data has **no hole**. Always measure geometry through evaluated_get(depsgraph).to_mesh() (that is what contract.py's _mesh_data does), or you will read \"the pin clips through\" as \"the pin is floating\".",
+    "verify": "mate_check(conn_id, fit=…) measures the actual clearance; interference_report measures unplanned interference."
+  }
+}

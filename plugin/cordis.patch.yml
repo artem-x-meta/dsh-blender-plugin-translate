@@ -1,0 +1,15 @@
+# dsh-blender-plugin bundle layer (declares `dsh.bundle` since v0.9.2).
+#
+# Why this is needed: since 0.1.7 DSH manages profile plugins with @deepseek-ai/dsh-plugin-manager, and the deciding factor is
+# the `dsh.bundle` field in package.json; a package without it is written as "installed as a plain dependency, not a
+# profile layer" and cannot be installed or switched as a bundle. Until now this package could only be injected at runtime by dsh-super-injector
+# -- once the injector breaks, all 15 tools **disappear at once** (while neither Blender nor the plugin package is broken), so the symptom and the root cause sit in different layers.
+#
+# Choose one of the two assembly methods (not both, or the two fibers will register duplicate tools under the same names):
+#   A. Injection-based (current): the registry.json of dsh-super-injector remembers this package and injects it automatically at startup;
+#   B. Bundle-based (this file): add this package to the profile's dsh.profile.bundles, and it is inserted at assembly time with the line below.
+# For switch steps and rollback see docs/dsh-update-adaptation.md.
+- insert:
+    - id: dsh-blender-plugin
+      name: 'dsh-blender-plugin'
+      config: {}

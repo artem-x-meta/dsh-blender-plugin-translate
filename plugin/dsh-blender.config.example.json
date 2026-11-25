@@ -1,0 +1,11 @@
+{
+  "_comment": "Copy to dsh-blender.config.json to take effect; every key can be omitted (omitted = auto-detect/default). See docs/configuration-reference.md for details",
+  "workDir": "C:\\Users\\<your-username>\\AppData\\Local\\dsh-blender-rt",
+  "blenderExe": "C:\\Program Files\\Blender Foundation\\Blender 5.2\\blender.exe",
+  "addonHost": "127.0.0.1",
+  "addonPort": 9876,
+  "httpPort": 9877,
+  "holder": "my-session",
+  "leaseTtlMs": 600000,
+  "_WSL_note": "Running DSH inside WSL while Blender is on Windows: set blenderExe to /mnt/d/.../blender.exe, and give workDir a Windows drive-letter path (it is mapped to /mnt/d/... automatically)"
+}
